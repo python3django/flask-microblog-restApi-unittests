@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block body %}
+    <form action="" method="post" novalidate>
+        {{ form.hidden_tag() }}
+        <p>
+            {{ form.name.label }}<br>
+            {{ form.name }}<br>
+            {% for error in form.name.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.content.label }}<br>
+            {{ form.content(cols=80, rows=4) }}<br>
+            {% for error in form.content.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>{{ form.submit() }}</p>
+    </form>
+    <hr>
+    {% for post in posts %}
+        <p>{{ post.id }}: {{ post.name }}</p>
+        <p>{{ post.content }}</p>
+        <p><a href="{{ url_for('main.edit', id=post.id) }}">Edited post</a> 
+        <a href="{{ url_for('main.delete', id=post.id) }}">Delete post</a></p>
+        <br>
+    {% endfor %}
+{% endblock %}
+
