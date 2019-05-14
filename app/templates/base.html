@@ -4,6 +4,16 @@
 <head>
 </head>
 <body>
+        <div>
+            Microblog:
+                <a href="{{ url_for('main.index') }}">Home</a>
+            {% if current_user.is_anonymous %}
+                <a href="{{ url_for('auth.login') }}">Login</a>
+            {% else %}
+                <a href="{{ url_for('auth.logout') }}">Logout</a>
+            {% endif %}
+        </div>
+        <hr>    
     <h1>Flask test project</h1>
     {% with messages = get_flashed_messages() %}
         {% if messages %}
@@ -16,6 +26,6 @@
         {% endif %}
     {% endwith %}    
 
-{% block body %}{% endblock %}
+{% block content %}{% endblock %}
 </body>
 </html>

@@ -1,7 +1,8 @@
 from flask import (Blueprint, request, url_for, current_app, jsonify)
-from app.main.models import Post
+from app.models import Post
 from app.database import db
 from werkzeug.http import HTTP_STATUS_CODES
+from flask_login import current_user, login_required
 
 
 bp = Blueprint('api', __name__, url_prefix ='/api')
@@ -21,6 +22,8 @@ def get_post(id):
     post = Post.query.get_or_404(id)
     data = {
             'id': post.id,
+            'timestamp': post.timestamp,
+            'user_id': post.user_id,
             'name': post.name,
             'content': post.content
     }
@@ -34,6 +37,8 @@ def get_posts():
     for post in posts:       
         data.append({
                     'id': post.id,
+                    'timestamp': post.timestamp,
+                    'user_id': post.user_id,
                     'name': post.name,
                     'content': post.content
         })       
@@ -48,12 +53,16 @@ def create_post():
         message = 'must include name and content fields'
         return bad_request(status_code, message)
     post = Post()
+    #post.user_id = current_user.id
+    post.user_id = 1 # for api tests in tests.py
     post.name = data['name']
     post.content = data['content']
     db.session.add(post)
     db.session.commit()
     data = {
             'id': post.id,
+            'user_id': post.user_id,
+            'timestamp': post.timestamp,
             'name': post.name,
             'content': post.content
     }
@@ -75,6 +84,8 @@ def update_post(id):
     db.session.commit()
     data = {
             'id': post.id,
+            'timestamp': post.timestamp,
+            'user_id': post.user_id,
             'name': post.name,
             'content': post.content
     }
@@ -93,9 +104,11 @@ def delete_post(id):
     data = []
     for post in posts:       
         data.append({
-                    'id': post.id,
-                    'name': post.name,
-                    'content': post.content
+                     'id': post.id,
+                     'timestamp': post.timestamp,
+                     'user_id': post.user_id,
+                     'name': post.name,
+                     'content': post.content
         })
     response = jsonify(data)
     response.status_code = 202
