@@ -54,7 +54,7 @@ def create_post():
         return bad_request(status_code, message)
     post = Post()
     #post.user_id = current_user.id
-    post.user_id = 1 # for api tests in tests.py
+    post.user_id = 1 # for ApiPostCase in tests.py
     post.name = data['name']
     post.content = data['content']
     db.session.add(post)
