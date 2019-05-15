@@ -1,15 +1,15 @@
-# Example simple Flask microblog with REST API and unittests
+# Example Flask microblog with REST API and unittests
 
 По мотивам этой статьи:  
 [правильная структура flask приложения](https://the-bosha.ru/2016/06/03/python-flask-freimvork-pravilnaia-struktura-prilozheniia/).  
-Добавленна авторизация и аутентификация, а также API и тесты. В качестве базы данных используется PostgreSQL.  
+Добавленна регистрация и аутентификация, а также API и тесты. В качестве базы данных используется PostgreSQL.  
 
 ## Setup
 
 ```
 python3 -m venv myvenv
 source myvenv/bin/activate
-pip3 install -r requipments.txt
+pip3 install -r requirements.txt
 export APP_SETTINGS="config.DevelopmentConfig"
 # DBUSERNAME, DBPASSWORD и DBNAME необходимо заменить на свои реквизиты доступа к БД
 export DATABASE_URL='postgresql://DBUSERNAME:DBPASSWORD@localhost/DBNAME'
@@ -20,11 +20,11 @@ python manage.py runserver
 ```
 
 ### Структура приложения:  
-- app/auth/ - авторизация и аутентификация  
+- app/auth/ - регистрация и аутентификация  
 - app/main/ - добавление, редактирование, удаление и отображение сообщений  
 - app/api/  - REST API  
 
-Запуск тестов:  
+#### Запуск тестов:  
 python3 tests.py  
 
 ### Примеры запросов к API:  

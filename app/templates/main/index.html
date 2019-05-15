@@ -22,12 +22,14 @@
     {% endif %}
     <hr>
     {% for post in posts %}
-        <p>id: {{ post.id }} user: {{ post.user_id }} time UTC: {{ post.timestamp }}</p>
+        <p>post id: {{ post.id }} user id: {{ post.user_id }} time UTC: {{ post.timestamp }}</p>
         <p>{{ post.name }}</p>
         <p>{{ post.content }}</p>
         {% if current_user.is_authenticated %}
-            <p><a href="{{ url_for('main.edit', id=post.id) }}">Edited post</a> 
-               <a href="{{ url_for('main.delete', id=post.id) }}">Delete post</a></p>
+            {% if current_user.id == post.user_id %}
+                <p><a href="{{ url_for('main.edit', id=post.id) }}">Edited post</a> 
+                   <a href="{{ url_for('main.delete', id=post.id) }}">Delete post</a></p>
+            {% endif %}
         {% endif %}
         <br>
     {% endfor %}

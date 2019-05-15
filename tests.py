@@ -4,9 +4,7 @@ from app.database import db
 from app import create_app
 from app.models import Post, User
 import json
-import base64
 from flask_login import current_user
-
 
 
 class UserPostModelCase(unittest.TestCase):
@@ -101,8 +99,8 @@ class UserPostCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.get_data()
         self.assertIn('Flask test project', str(data))
-        self.assertIn('id: 1 user: 1 time UTC:', str(data))
-        self.assertIn('id: 2 user: 2 time UTC:', str(data))
+        self.assertIn('post id: 1 user id: 1 time UTC:', str(data))
+        self.assertIn('post id: 2 user id: 2 time UTC:', str(data))
         self.assertIn('name 1', str(data))
         self.assertIn('name 2', str(data))
         self.assertIn('content 1', str(data))
@@ -122,7 +120,7 @@ class UserPostCase(unittest.TestCase):
             start = data.find('name="csrf_token"') + 39 
             stop = start + 91           
             csrf_token = data[start:stop]
-            # логинимся с ошибочными username
+            # логинимся с ошибочным username
             response_post = c.post(
                               path='/auth/login',
                               data={"username": "bad_username", "password": password, "submit": submit, 'csrf_token': csrf_token},
@@ -133,7 +131,7 @@ class UserPostCase(unittest.TestCase):
             self.assertIn('Invalid username or password', str(data))
             self.assertNotIn('Logout', str(data))  
             self.assertIn('Login', str(data))
-            # логинимся с ошибочными password
+            # логинимся с ошибочным password
             response_post = c.post(
                               path='/auth/login',
                               data={"username": username, "password": "bad_password", "submit": submit, 'csrf_token': csrf_token},
@@ -144,7 +142,7 @@ class UserPostCase(unittest.TestCase):
             self.assertIn('Invalid username or password', str(data))
             self.assertNotIn('Logout', str(data))  
             self.assertIn('Login', str(data))
-            # логинимся верными данными
+            # логинимся с верными данными
             response_post = c.post(
                               path='/auth/login',
                               data={"username": username, "password": password, "submit": submit, 'csrf_token': csrf_token},
@@ -155,8 +153,8 @@ class UserPostCase(unittest.TestCase):
             data = response_post.data
             self.assertIn('Logout', str(data))  
             self.assertNotIn('Login', str(data))          
-            self.assertIn('id: 1 user: 1 time UTC:', str(data))
-            self.assertIn('id: 2 user: 2 time UTC:', str(data))
+            self.assertIn('post id: 1 user id: 1 time UTC:', str(data))
+            self.assertIn('post id: 2 user id: 2 time UTC:', str(data))
             self.assertIn('name 1', str(data))
             self.assertIn('name 2', str(data))
             self.assertIn('content 1', str(data))
@@ -182,7 +180,7 @@ class UserPostCase(unittest.TestCase):
             # получаем страницу с form в которой есть csrf_token
             response_register_get = c.get(path='/auth/register', content_type='text/html')            
             data = str(response_register_get.data)
-            self.assertIn('<h1>Register</h1>', str(data))
+            self.assertIn('<h1>Register</h1>', data)
             # получаем csrf_token
             start = data.find('name="csrf_token"') + 39 
             stop = start + 91           
@@ -214,15 +212,228 @@ class UserPostCase(unittest.TestCase):
             data = response_login_post.data
             self.assertIn('Logout', str(data))  
             self.assertNotIn('Login', str(data))          
-            self.assertIn('id: 1 user: 1 time UTC:', str(data))
-            self.assertIn('id: 2 user: 2 time UTC:', str(data))
+            self.assertIn('post id: 1 user id: 1 time UTC:', str(data))
+            self.assertIn('post id: 2 user id: 2 time UTC:', str(data))
             self.assertIn('name 1', str(data))
             self.assertIn('name 2', str(data))
             self.assertIn('content 1', str(data))
             self.assertIn('content 2', str(data))
-            self.assertIn('Edited post', str(data))
-            self.assertIn('Delete post', str(data))
+
    
+    def test_create_post(self):      
+        with self.client as c:
+            username = 'bob'
+            password = '321'
+            submit = "Sign In"
+            # получаем страницу с form в которой есть csrf_token
+            response_get = c.get(path='/auth/login', content_type='text/html')
+            data = str(response_get.data)
+            # получаем csrf_token
+            start = data.find('name="csrf_token"') + 39 
+            stop = start + 91           
+            csrf_token = data[start:stop]
+            # проходим процедуру аутентификации
+            response_post = c.post(
+                              path='/auth/login',
+                              data={"username": username, "password": password, "submit": submit, 'csrf_token': csrf_token},
+                              follow_redirects=True
+            )
+            self.assertEqual(response_post.status_code, 200)
+            self.assertEqual(current_user.username, username)
+            data = response_post.data
+            self.assertIn('Logout', str(data))
+        # создаем новый пост
+        name = 'bob post name'
+        content = 'bob post content'
+        submit = "Submit"
+        response_create = self.client.post(
+                                 path='/main/', 
+                                 data={"name": name, "content": content, "submit": submit, 'csrf_token': csrf_token},
+                                 follow_redirects=True
+        )                  
+        self.assertEqual(response_create.status_code, 200)
+        data = str(response_create.data)
+        self.assertIn('Logout, {}'.format(username), data)
+        self.assertNotIn('Login', data)   
+        self.assertIn('Your post is now live!', data)       
+        self.assertIn('post id: 1 user id: 1 time UTC:', data)
+        self.assertIn('post id: 2 user id: 2 time UTC:', data)
+        self.assertIn('post id: 3 user id: 2 time UTC:', data)
+        self.assertIn('name 1', data)
+        self.assertIn('name 2', data)
+        self.assertIn('bob post name', data)
+        self.assertIn('content 1', data)
+        self.assertIn('content 2', data)
+        self.assertIn('bob post content', data)
+        self.assertIn('Edited post', data)
+        self.assertIn('Delete post', data)        
+        posts = Post.query.all()
+        self.assertEqual(len(posts), 3)
+
+    def test_edit_post(self):      
+        with self.client as c:
+            username = 'bob'
+            password = '321'
+            submit = "Sign In"
+            # получаем страницу с form в которой есть csrf_token
+            response_get = c.get(path='/auth/login', content_type='text/html')
+            data = str(response_get.data)
+            # получаем csrf_token
+            start = data.find('name="csrf_token"') + 39 
+            stop = start + 91           
+            csrf_token = data[start:stop]
+            # пробуем отредактировать пост с id=2 в качестве анонимного пользователя 
+            name = 'anonymous edit name 2'
+            content = 'anonymous edit content 2'
+            submit = "Submit"
+            response_anonymous_edit = c.post(
+                                     path='/main/edit/2', 
+                                     data={"name": name, "content": content, "submit": submit, 'csrf_token': csrf_token},
+                                     follow_redirects=True
+            )                  
+            self.assertEqual(response_anonymous_edit.status_code, 200)
+            data = str(response_anonymous_edit.data)
+            self.assertNotIn('Logout, {}'.format(username), data)
+            self.assertIn('Login', data)   
+            self.assertIn('Please log in to access this page.', data)       
+            self.assertNotIn('name 1', data)
+            self.assertNotIn('name 2', data)
+            self.assertNotIn('anonymous edit name 2', data)
+            self.assertNotIn('content 1', data)
+            self.assertNotIn('content 2', data)
+            self.assertNotIn('anonymous edit content 2', data)
+            self.assertNotIn('Edited post', data)
+            self.assertNotIn('Delete post', data)        
+            post = Post.query.filter_by(id=2).first()
+            self.assertIn('name 2', post.name)
+            self.assertIn('content 2', post.content)
+            self.assertNotIn(name, post.name)
+            self.assertNotIn(content, post.content)
+            # проходим процедуру аутентификации
+            response_post = c.post(
+                              path='/auth/login',
+                              data={"username": username, "password": password, "submit": submit, 'csrf_token': csrf_token},
+                              follow_redirects=True
+            )
+            self.assertEqual(response_post.status_code, 200)
+            self.assertEqual(current_user.username, username)
+            data = response_post.data
+            self.assertIn('Logout', str(data))
+        # пробуем отредактировать пост с id=1, который не принадлежит нашему аутентифицированному пользователю 
+        name = 'bad edit name 1'
+        content = 'bad edit content 1'
+        submit = "Submit"
+        response_bad_edit = self.client.post(
+                                 path='/main/edit/1', 
+                                 data={"name": name, "content": content, "submit": submit, 'csrf_token': csrf_token},
+                                 follow_redirects=True
+        )                  
+        self.assertEqual(response_bad_edit.status_code, 200)
+        data = str(response_bad_edit.data)
+        self.assertIn('Logout, {}'.format(username), data)
+        self.assertNotIn('Login', data)   
+        self.assertIn('Permission error!', data)
+        self.assertNotIn('Your post is now edited!', data)       
+        self.assertNotIn(name, data)
+        self.assertNotIn(content, data)
+        post = Post.query.filter_by(id=1).first()
+        self.assertNotEqual(post.name, name)
+        self.assertNotEqual(post.content, content)
+        self.assertEqual(post.name, "name 1")
+        self.assertEqual(post.content, "content 1")
+        # редактируем пост с id=2, который принадлежит нашему аутентифицированному пользователю 
+        name = 'edit name 2'
+        content = 'edit content 2'
+        submit = "Submit"
+        response_edit = self.client.post(
+                                 path='/main/edit/2', 
+                                 data={"name": name, "content": content, "submit": submit, 'csrf_token': csrf_token},
+                                 follow_redirects=True
+        )                  
+        self.assertEqual(response_edit.status_code, 200)
+        data = str(response_edit.data)
+        self.assertIn('Logout, {}'.format(username), data)
+        self.assertNotIn('Login', data)   
+        self.assertIn('Your post is now edited!', data)       
+        self.assertIn('post id: 1 user id: 1 time UTC:', data)
+        self.assertIn('post id: 2 user id: 2 time UTC:', data)
+        self.assertNotIn('post id: 3 user id: 2 time UTC:', data)
+        self.assertIn('name 1', data)
+        self.assertIn('edit name 2', data)
+        self.assertIn('content 1', data)
+        self.assertIn('edit content 2', data)
+        self.assertIn('Edited post', data)
+        self.assertIn('Delete post', data)        
+        posts = Post.query.all()
+        self.assertEqual(len(posts), 2)
+
+    def test_delete_post(self):
+        # пробуем удалить пост с id=2 в качестве неаутентифицированного пользователя
+        response_anonymous_delete = self.client.get(path='/main/delete/2', follow_redirects=True)
+        self.assertEqual(response_anonymous_delete.status_code, 200)
+        data = str(response_anonymous_delete.data)
+        self.assertIn('Login', data)
+        self.assertIn('Please log in to access this page.', data)
+        posts = Post.query.all()
+        self.assertEqual(len(posts), 2)       
+        # аутентифицируемся
+        with self.client as c:
+            username = 'bob'
+            password = '321'
+            submit = "Sign In"
+            # получаем страницу с form в которой есть csrf_token
+            response_get = c.get(path='/auth/login', content_type='text/html')
+            data = str(response_get.data)
+            # получаем csrf_token
+            start = data.find('name="csrf_token"') + 39 
+            stop = start + 91           
+            csrf_token = data[start:stop]
+            # логинимся
+            response_post = c.post(
+                              path='/auth/login',
+                              data={"username": username, "password": password, "submit": submit, 'csrf_token': csrf_token},
+                              follow_redirects=True
+            )
+            data = response_post.data
+            self.assertEqual(response_post.status_code, 200)
+            data = str(response_post.data)
+            self.assertIn('Logout, {}'.format(username), data)
+            self.assertNotIn('Login', data)
+            self.assertIn('name 1', data)
+            self.assertIn('name 2', data)
+            self.assertIn('content 1', data)
+            self.assertIn('content 2', data)
+            self.assertIn('Edited post', data)
+            self.assertIn('Delete post', data)
+            # пробуем удалить пост с id=1 который не пренадлежить нашему пользователю
+            response_authenticated_bad_delete = self.client.get(path='/main/delete/1', follow_redirects=True)
+            self.assertEqual(response_authenticated_bad_delete.status_code, 200)
+            data = str(response_authenticated_bad_delete.data)
+            self.assertIn('Logout, {}'.format(username), data)
+            self.assertNotIn('Login', data)
+            self.assertIn('name 1', data)
+            self.assertIn('name 2', data)
+            self.assertIn('content 1', data)
+            self.assertIn('content 2', data)
+            self.assertIn('Permission error!', data)
+            self.assertNotIn('Your post is now deleted!', data)
+            posts = Post.query.all()
+            self.assertEqual(len(posts), 2)
+            # удаляем пост с id=2 который принадлежит нашему пользователю
+            response_authenticated_delete = self.client.get(path='/main/delete/2', follow_redirects=True)
+            self.assertEqual(response_authenticated_delete.status_code, 200)
+            data = str(response_authenticated_delete.data)
+            self.assertIn('Logout, {}'.format(username), data)
+            self.assertNotIn('Login', data)
+            self.assertIn('name 1', data)
+            self.assertNotIn('name 2', data)
+            self.assertIn('content 1', data)
+            self.assertNotIn('content 2', data)
+            self.assertIn('Your post is now deleted!', data)
+            posts = Post.query.all()
+            self.assertEqual(len(posts), 1)
+
+
 
 class ApiPostCase(unittest.TestCase):     
     def setUp(self):

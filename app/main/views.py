@@ -10,6 +10,7 @@ from app.database import db
 from .forms import PostCreateForm
 from app.models import Post
 from flask_login import current_user, login_user, login_required, logout_user
+from sqlalchemy import desc, asc
 
 
 bp = Blueprint('main', __name__, url_prefix ='/main')
@@ -24,7 +25,7 @@ def index():
         db.session.commit()
         flash('Your post is now live!')
         return redirect(url_for('main.index'))
-    posts = Post.query.all()
+    posts = Post.query.order_by(desc(Post.timestamp)).all()
     return render_template('main/index.html', form=form, posts=posts)
 
 
@@ -34,11 +35,14 @@ def edit(id):
     post = Post.query.get_or_404(id)
     form = PostCreateForm(name=post.name, content=post.content)
     if form.validate_on_submit():
-        post.name = form.name.data
-        post.content = form.content.data
-        db.session.commit()
-        flash('Your post is now edited!')
-        return redirect(url_for('main.index'))    
+        if current_user.id == post.user_id:
+            post.name = form.name.data
+            post.content = form.content.data
+            db.session.commit()
+            flash('Your post is now edited!')
+        else:
+            flash('Permission error!')
+        return redirect(url_for('main.index'))             
     return render_template('main/edit.html', form=form)
 
 
@@ -46,8 +50,11 @@ def edit(id):
 @login_required   
 def delete(id):
     post = Post.query.get_or_404(id)
-    db.session.delete(post)
-    db.session.commit()
-    flash('Your post is now deleted!')
+    if current_user.id == post.user_id:
+        db.session.delete(post)
+        db.session.commit()
+        flash('Your post is now deleted!')
+    else:
+        flash('Permission error!')
     return redirect(url_for('main.index'))
 

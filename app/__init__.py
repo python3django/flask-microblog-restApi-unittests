@@ -26,7 +26,7 @@ def create_app():
             toolbar = DebugToolbarExtension(app)
         except:
             pass
-    """  
+    """ 
 
     import app.main.views as main
     app.register_blueprint(main.bp)
