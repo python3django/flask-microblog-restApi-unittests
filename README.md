@@ -28,23 +28,24 @@ python manage.py runserver
 python3 tests.py  
 
 ### Примеры запросов к API:  
-- http GET http://127.0.0.1:5000/api/posts  
-- http GET http://127.0.0.1:5000/api/posts/2  
+##### GET запросы может совершать любой (анонимный и аутентифицированный) пользователь:  
+- http GET 127.0.0.1:5000/api/posts  
+- http GET 127.0.0.1:5000/api/posts/2  
 ##### Методы POST, PUT, DELETE используют MultiAuth аутентификацию (либо по паролю, либо по токену).  
 ##### Получить токен:  
-- http --auth alex:123 POST http://127.0.0.1:5000/api/tokens  
+- http --auth alex:123 POST 127.0.0.1:5000/api/tokens  
 ##### POST:  
-- http --auth alex:123 POST http://127.0.0.1:5000/api/posts name="Post name" content="Post content"  
-- http POST http://127.0.0.1:5000/api/posts name="Post name" content="Post content" "Authorization:Bearer Zl1wwrbi+qXw9cX1KcN6zvX5njIKuIH2"  
+- http --auth alex:123 POST 127.0.0.1:5000/api/posts name="Post name" content="Post content"  
+- http POST 127.0.0.1:5000/api/posts name="Post name" content="Post content" "Authorization:Bearer Zl1wwrbi+qXw9cX1KcN6zvX5njIKuIH2"  
 ##### PUT:  
-- http --auth alex:123 PUT http://127.0.0.1:5000/api/posts/2 content="Text post" name="Name post"  
-- http PUT http://127.0.0.1:5000/api/posts/2 content="Text post" name="Name post" "Authorization:Bearer Zl1wwrbi+qXw9cX1KcN6zvX5njIKuIH2"  
+- http --auth alex:123 PUT 127.0.0.1:5000/api/posts/2 content="Text post" name="Name post"  
+- http PUT 127.0.0.1:5000/api/posts/2 content="Text post" name="Name post" "Authorization:Bearer Zl1wwrbi+qXw9cX1KcN6zvX5njIKuIH2"  
 ##### DLETE:  
-- http --auth alex:123 DELETE http://127.0.0.1:5000/api/posts/2  
-- http DELETE http://127.0.0.1:5000/api/posts/2 "Authorization:Bearer Zl1wwrbi+qXw9cX1KcN6zvX5njIKuIH2"  
+- http --auth alex:123 DELETE 127.0.0.1:5000/api/posts/2  
+- http DELETE 127.0.0.1:5000/api/posts/2 "Authorization:Bearer Zl1wwrbi+qXw9cX1KcN6zvX5njIKuIH2"  
 ##### Удалить (обновить) токен. Либо по паролю, либо по токену:  
-- http DELETE http://127.0.0.1:5000/api/tokens "Authorization:Bearer Zl1wwrbi+qXw9cX1KcN6zvX5njIKuIH2"  
-- http --auth alex:123 DELETE http://127.0.0.1:5000/api/tokens  
+- http DELETE 127.0.0.1:5000/api/tokens "Authorization:Bearer Zl1wwrbi+qXw9cX1KcN6zvX5njIKuIH2"  
+- http --auth alex:123 DELETE 127.0.0.1:5000/api/tokens  
 
 
 
