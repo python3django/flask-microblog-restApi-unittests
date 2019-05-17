@@ -1,17 +1,17 @@
 from flask import (Blueprint, request, url_for, current_app, jsonify)
-from app.models import Post
+from app.models import Post, User
 from app.database import db
 from werkzeug.http import HTTP_STATUS_CODES
 from flask_login import current_user, login_required
-
 from flask import g
-from flask_httpauth import HTTPBasicAuth
-from app.models import User
-
+from flask_httpauth import HTTPBasicAuth, HTTPTokenAuth, MultiAuth
+ 
 
 bp = Blueprint('api', __name__, url_prefix ='/api')
 
 basic_auth = HTTPBasicAuth()
+token_auth = HTTPTokenAuth()
+multi_auth = MultiAuth(basic_auth, token_auth)
 
 @basic_auth.verify_password
 def verify_password(username, password):
@@ -27,6 +27,17 @@ def basic_auth_error():
     return bad_request(401)
 
 
+@token_auth.verify_token
+def verify_token(token):
+    g.current_user = User.check_token(token) if token else None
+    return g.current_user is not None
+
+
+@token_auth.error_handler
+def token_auth_error():
+    return bad_request(401)
+
+
 def bad_request(status_code=400, message=None):
     payload = {'error': HTTP_STATUS_CODES.get(status_code, 'Unknown error')}
     if message:
@@ -34,6 +45,22 @@ def bad_request(status_code=400, message=None):
     response = jsonify(payload)
     response.status_code = status_code
     return response
+
+
+@bp.route('/tokens', methods=['POST'])
+@basic_auth.login_required
+def get_token():
+    token = g.current_user.get_token()
+    db.session.commit()
+    return jsonify({'token': token})
+
+
+@bp.route('/tokens', methods=['DELETE'])
+@multi_auth.login_required
+def revoke_token():
+    g.current_user.revoke_token()
+    db.session.commit()
+    return '', 204
 
 
 @bp.route('/posts/<int:id>', methods=['GET'])
@@ -65,7 +92,7 @@ def get_posts():
 
 
 @bp.route('/posts', methods=['POST'])
-@basic_auth.login_required
+@multi_auth.login_required
 def create_post():
     data = request.get_json() or {}
     if ('name' not in data) or ('content' not in data):
@@ -92,7 +119,7 @@ def create_post():
 
 
 @bp.route('/posts/<int:id>', methods=['PUT'])
-@basic_auth.login_required
+@multi_auth.login_required
 def update_post(id):
     post = Post.query.get_or_404(id)
     data = request.get_json() or {}
@@ -121,7 +148,7 @@ def update_post(id):
 
 
 @bp.route('/posts/<int:id>', methods=['DELETE'])
-@basic_auth.login_required
+@multi_auth.login_required
 def delete_post(id):
     post = Post.query.get_or_404(id)
     if post.user_id != g.current_user.id:
