@@ -20,13 +20,13 @@ def create_app():
     login.init_app(app)
 
     """
-    if app.debug == True:
+    if app.debug:
         try:
             from flask_debugtoolbar import DebugToolbarExtension
             toolbar = DebugToolbarExtension(app)
         except:
             pass
-    """ 
+    """
 
     import app.main.views as main
     app.register_blueprint(main.bp)

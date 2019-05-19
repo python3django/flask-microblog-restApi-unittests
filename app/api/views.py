@@ -1,17 +1,17 @@
-from flask import (Blueprint, request, url_for, current_app, jsonify)
+from flask import Blueprint, request, url_for, jsonify
 from app.models import Post, User
 from app.database import db
 from werkzeug.http import HTTP_STATUS_CODES
-from flask_login import current_user, login_required
 from flask import g
 from flask_httpauth import HTTPBasicAuth, HTTPTokenAuth, MultiAuth
- 
 
-bp = Blueprint('api', __name__, url_prefix ='/api')
+
+bp = Blueprint('api', __name__, url_prefix='/api')
 
 basic_auth = HTTPBasicAuth()
 token_auth = HTTPTokenAuth()
 multi_auth = MultiAuth(basic_auth, token_auth)
+
 
 @basic_auth.verify_password
 def verify_password(username, password):
@@ -80,14 +80,14 @@ def get_post(id):
 def get_posts():
     data = []
     posts = Post.query.all()
-    for post in posts:       
+    for post in posts:
         data.append({
                     'id': post.id,
                     'timestamp': post.timestamp,
                     'user_id': post.user_id,
                     'name': post.name,
                     'content': post.content
-        })       
+        })
     return jsonify(data)
 
 
@@ -115,7 +115,7 @@ def create_post():
     response = jsonify(data)
     response.status_code = 201
     response.headers['Location'] = url_for('api.get_post', id=post.id)
-    return response   
+    return response
 
 
 @bp.route('/posts/<int:id>', methods=['PUT'])
@@ -159,7 +159,7 @@ def delete_post(id):
     db.session.commit()
     posts = Post.query.all()
     data = []
-    for post in posts:       
+    for post in posts:
         data.append({
                      'id': post.id,
                      'timestamp': post.timestamp,
@@ -171,4 +171,3 @@ def delete_post(id):
     response.status_code = 202
     response.headers['Location'] = url_for('api.get_posts')
     return response
-

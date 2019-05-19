@@ -24,7 +24,9 @@ python manage.py runserver
 - app/main/ - добавление, редактирование, удаление и отображение сообщений  
 - app/api/  - REST API  
 
-#### Запуск тестов:  
+#### Запуск тестов:
+source myvenv/bin/activate  
+export APP_SETTINGS="config.DevelopmentConfig"  
 python3 tests.py  
 
 ### Примеры запросов к API:  

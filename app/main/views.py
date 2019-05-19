@@ -1,7 +1,6 @@
 from flask import (
     Blueprint,
     render_template,
-    request,
     flash,
     redirect,
     url_for,
@@ -9,18 +8,22 @@ from flask import (
 from app.database import db
 from .forms import PostCreateForm
 from app.models import Post
-from flask_login import current_user, login_user, login_required, logout_user
-from sqlalchemy import desc, asc
+from flask_login import current_user, login_required
+from sqlalchemy import desc
 
 
-bp = Blueprint('main', __name__, url_prefix ='/main')
+bp = Blueprint('main', __name__, url_prefix='/main')
 
 
 @bp.route('/', methods=['GET', 'POST'])
 def index():
     form = PostCreateForm()
     if form.validate_on_submit():
-        post = Post(user_id=current_user.id, name=form.name.data, content=form.content.data)
+        post = Post(
+                    user_id=current_user.id,
+                    name=form.name.data,
+                    content=form.content.data
+        )
         db.session.add(post)
         db.session.commit()
         flash('Your post is now live!')
@@ -33,7 +36,10 @@ def index():
 @login_required
 def edit(id):
     post = Post.query.get_or_404(id)
-    form = PostCreateForm(name=post.name, content=post.content)
+    form = PostCreateForm(
+                    name=post.name,
+                    content=post.content
+    )
     if form.validate_on_submit():
         if current_user.id == post.user_id:
             post.name = form.name.data
@@ -42,12 +48,12 @@ def edit(id):
             flash('Your post is now edited!')
         else:
             flash('Permission error!')
-        return redirect(url_for('main.index'))             
+        return redirect(url_for('main.index'))
     return render_template('main/edit.html', form=form)
 
 
 @bp.route('/delete/<int:id>', methods=['GET', 'POST'])
-@login_required   
+@login_required
 def delete(id):
     post = Post.query.get_or_404(id)
     if current_user.id == post.user_id:
@@ -57,4 +63,3 @@ def delete(id):
     else:
         flash('Permission error!')
     return redirect(url_for('main.index'))
-

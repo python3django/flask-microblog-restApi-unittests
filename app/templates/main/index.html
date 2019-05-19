@@ -19,8 +19,8 @@
         </p>
         <p>{{ form.submit() }}</p>
     </form>
-    {% endif %}
     <hr>
+    {% endif %}    
     {% for post in posts %}
         <p>post id: {{ post.id }} user id: {{ post.user_id }} time UTC: {{ post.timestamp }}</p>
         <p>{{ post.name }}</p>

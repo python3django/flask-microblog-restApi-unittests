@@ -1,4 +1,3 @@
-from config import Config
 import unittest
 from app.database import db
 from app import create_app
@@ -8,6 +7,7 @@ from flask_login import current_user
 from requests.auth import _basic_auth_str
 import base64
 import os
+
 
 class UserPostModelCase(unittest.TestCase):
     def setUp(self):
@@ -50,7 +50,7 @@ class UserPostModelCase(unittest.TestCase):
         self.assertEqual(u2.username, 'bob')
         self.assertEqual(u1.email, "john@mail.com")
         self.assertEqual(u2.email, "bob@mail.com")
-        self.assertTrue(u1.check_password('123'))        
+        self.assertTrue(u1.check_password('123'))
         self.assertTrue(u2.check_password('321'))
         self.assertFalse(u1.check_password('321'))
         self.assertFalse(u2.check_password('123'))
@@ -97,82 +97,119 @@ class UserPostCase(unittest.TestCase):
         db.drop_all()
 
     def test_index_without_login(self):
-        response = self.client.get(path='/main/', content_type='text/html')
+        """
+        Тестируем index без аутентификации.
+        """
+        response = self.client.get(
+                            path='/main/',
+                            content_type='text/html'
+        )
         self.assertEqual(response.status_code, 200)
-        data = response.get_data()
-        self.assertIn('Flask test project', str(data))
-        self.assertIn('post id: 1 user id: 1 time UTC:', str(data))
-        self.assertIn('post id: 2 user id: 2 time UTC:', str(data))
-        self.assertIn('name 1', str(data))
-        self.assertIn('name 2', str(data))
-        self.assertIn('content 1', str(data))
-        self.assertIn('content 2', str(data))
-        self.assertIn('Login', str(data))
-        self.assertNotIn('Logout', str(data))
+        data = str(response.get_data())
+        self.assertIn('Microblog', data)
+        self.assertIn('post id: 1 user id: 1 time UTC:', data)
+        self.assertIn('post id: 2 user id: 2 time UTC:', data)
+        self.assertIn('name 1', data)
+        self.assertIn('name 2', data)
+        self.assertIn('content 1', data)
+        self.assertIn('content 2', data)
+        self.assertIn('Login', data)
+        self.assertNotIn('Logout', data)
 
-    def test_login_logout(self):      
+    def test_login_logout(self):
+        """
+        Тестируем login и logout
+        """
         with self.client as c:
             username = 'bob'
             password = '321'
             submit = "Sign In"
             # получаем страницу с form в которой есть csrf_token
-            response_get = c.get(path='/auth/login', content_type='text/html')
+            response_get = c.get(
+                            path='/auth/login',
+                            content_type='text/html'
+            )
             data = str(response_get.data)
             # получаем csrf_token
-            start = data.find('name="csrf_token"') + 39 
-            stop = start + 91           
+            start = data.find('name="csrf_token"') + 39
+            stop = start + 91
             csrf_token = data[start:stop]
             # логинимся с ошибочным username
+            data = {
+                    "username": "bad_username",
+                    "password": password,
+                    "submit": submit,
+                    "csrf_token": csrf_token
+            }
             response_post = c.post(
                               path='/auth/login',
-                              data={"username": "bad_username", "password": password, "submit": submit, 'csrf_token': csrf_token},
+                              data=data,
                               follow_redirects=True
             )
-            data = response_post.data
+            data = str(response_post.data)
             self.assertEqual(response_post.status_code, 200)
-            self.assertIn('Invalid username or password', str(data))
-            self.assertNotIn('Logout', str(data))  
-            self.assertIn('Login', str(data))
+            self.assertIn('Invalid username or password', data)
+            self.assertNotIn('Logout', data)
+            self.assertIn('Login', data)
             # логинимся с ошибочным password
+            data = {
+                    "username": username,
+                    "password": "bad_password",
+                    "submit": submit,
+                    "csrf_token": csrf_token
+            }
             response_post = c.post(
                               path='/auth/login',
-                              data={"username": username, "password": "bad_password", "submit": submit, 'csrf_token': csrf_token},
+                              data=data,
                               follow_redirects=True
             )
-            data = response_post.data
+            data = str(response_post.data)
             self.assertEqual(response_post.status_code, 200)
-            self.assertIn('Invalid username or password', str(data))
-            self.assertNotIn('Logout', str(data))  
-            self.assertIn('Login', str(data))
+            self.assertIn('Invalid username or password', data)
+            self.assertNotIn('Logout', data)
+            self.assertIn('Login', data)
             # логинимся с верными данными
+            data = {
+                    "username": username,
+                    "password": password,
+                    "submit": submit,
+                    "csrf_token": csrf_token
+            }
             response_post = c.post(
                               path='/auth/login',
-                              data={"username": username, "password": password, "submit": submit, 'csrf_token': csrf_token},
+                              data=data,
                               follow_redirects=True
             )
             self.assertEqual(response_post.status_code, 200)
             self.assertEqual(current_user.username, username)
-            data = response_post.data
-            self.assertIn('Logout', str(data))  
-            self.assertNotIn('Login', str(data))          
-            self.assertIn('post id: 1 user id: 1 time UTC:', str(data))
-            self.assertIn('post id: 2 user id: 2 time UTC:', str(data))
-            self.assertIn('name 1', str(data))
-            self.assertIn('name 2', str(data))
-            self.assertIn('content 1', str(data))
-            self.assertIn('content 2', str(data))
-            self.assertIn('Edited post', str(data))
-            self.assertIn('Delete post', str(data))
+            data = str(response_post.data)
+            self.assertIn('Logout', data)
+            self.assertNotIn('Login', data)
+            self.assertIn('post id: 1 user id: 1 time UTC:', data)
+            self.assertIn('post id: 2 user id: 2 time UTC:', data)
+            self.assertIn('name 1', data)
+            self.assertIn('name 2', data)
+            self.assertIn('content 1', data)
+            self.assertIn('content 2', data)
+            self.assertIn('Edited post', data)
+            self.assertIn('Delete post', data)
             # logout
-            response_logout = c.get(path='/auth/logout', content_type='text/html', follow_redirects=True)
+            response_logout = c.get(
+                                path='/auth/logout',
+                                content_type='text/html',
+                                follow_redirects=True
+            )
             self.assertEqual(response_logout.status_code, 200)
-            data = response_logout.data
-            self.assertNotIn('Logout', str(data))  
-            self.assertIn('Login', str(data))          
-            self.assertNotIn('Edited post', str(data))
-            self.assertNotIn('Delete post', str(data))         
+            data = str(response_logout.data)
+            self.assertNotIn('Logout', data)
+            self.assertIn('Login', data)
+            self.assertNotIn('Edited post', data)
+            self.assertNotIn('Delete post', data)
 
-    def test_register(self):      
+    def test_register(self):
+        """
+        Тестируем регистрацию нового пользователя.
+        """
         with self.client as c:
             username = 'boss'
             password = '789'
@@ -180,49 +217,60 @@ class UserPostCase(unittest.TestCase):
             submit = 'Register'
             email = 'boss@boss.com'
             # получаем страницу с form в которой есть csrf_token
-            response_register_get = c.get(path='/auth/register', content_type='text/html')            
+            response_register_get = c.get(
+                                path='/auth/register',
+                                content_type='text/html'
+            )
             data = str(response_register_get.data)
-            self.assertIn('<h1>Register</h1>', data)
+            self.assertIn('Register', data)
             # получаем csrf_token
-            start = data.find('name="csrf_token"') + 39 
-            stop = start + 91           
+            start = data.find('name="csrf_token"') + 39
+            stop = start + 91
             csrf_token = data[start:stop]
             # регистрируем нового пользователя
             response_register_post = c.post(
                               path='/auth/register',
                               data={
-                                    "username": username, 
-                                    "password": password, 
-                                    "password2": password2, 
-                                    "submit": submit, 
-                                    "csrf_token": csrf_token, 
+                                    "username": username,
+                                    "password": password,
+                                    "password2": password2,
+                                    "submit": submit,
+                                    "csrf_token": csrf_token,
                                     "email": email},
                               follow_redirects=True
             )
-            data = response_register_post.data
+            data = str(response_register_post.data)
             self.assertEqual(response_register_post.status_code, 200)
-            self.assertIn('Congratulations, you are now a registered user!', str(data))
+            self.assertIn('Congratulations, you are now a registered user!', data)
             # логинимся с данными только что созданного пользователя
             submit = "Sign In"
+            data = {
+                    "username": username,
+                    "password": password,
+                    "submit": submit,
+                    "csrf_token": csrf_token
+            }
             response_login_post = c.post(
                               path="/auth/login",
-                              data={"username": username, "password": password, "submit": submit, "csrf_token": csrf_token},
+                              data=data,
                               follow_redirects=True
             )
             self.assertEqual(response_login_post.status_code, 200)
             self.assertEqual(current_user.username, username)
-            data = response_login_post.data
-            self.assertIn('Logout', str(data))  
-            self.assertNotIn('Login', str(data))          
-            self.assertIn('post id: 1 user id: 1 time UTC:', str(data))
-            self.assertIn('post id: 2 user id: 2 time UTC:', str(data))
-            self.assertIn('name 1', str(data))
-            self.assertIn('name 2', str(data))
-            self.assertIn('content 1', str(data))
-            self.assertIn('content 2', str(data))
+            data = str(response_login_post.data)
+            self.assertIn('Logout', data)
+            self.assertNotIn('Login', data)
+            self.assertIn('post id: 1 user id: 1 time UTC:', data)
+            self.assertIn('post id: 2 user id: 2 time UTC:', data)
+            self.assertIn('name 1', data)
+            self.assertIn('name 2', data)
+            self.assertIn('content 1', data)
+            self.assertIn('content 2', data)
 
-   
-    def test_create_post(self):      
+    def test_create_post(self):
+        """
+        Тестируем создание нового поста.
+        """
         with self.client as c:
             username = 'bob'
             password = '321'
@@ -231,13 +279,19 @@ class UserPostCase(unittest.TestCase):
             response_get = c.get(path='/auth/login', content_type='text/html')
             data = str(response_get.data)
             # получаем csrf_token
-            start = data.find('name="csrf_token"') + 39 
-            stop = start + 91           
+            start = data.find('name="csrf_token"') + 39
+            stop = start + 91
             csrf_token = data[start:stop]
             # проходим процедуру аутентификации
+            data = {
+                    "username": username,
+                    "password": password,
+                    "submit": submit,
+                    "csrf_token": csrf_token
+            }
             response_post = c.post(
                               path='/auth/login',
-                              data={"username": username, "password": password, "submit": submit, 'csrf_token': csrf_token},
+                              data=data,
                               follow_redirects=True
             )
             self.assertEqual(response_post.status_code, 200)
@@ -248,16 +302,22 @@ class UserPostCase(unittest.TestCase):
         name = 'bob post name'
         content = 'bob post content'
         submit = "Submit"
+        data = {
+                "name": name,
+                "content": content,
+                "submit": submit,
+                "csrf_token": csrf_token
+        }
         response_create = self.client.post(
-                                 path='/main/', 
-                                 data={"name": name, "content": content, "submit": submit, 'csrf_token': csrf_token},
+                                 path='/main/',
+                                 data=data,
                                  follow_redirects=True
-        )                  
+        )
         self.assertEqual(response_create.status_code, 200)
         data = str(response_create.data)
         self.assertIn('Logout, {}'.format(username), data)
-        self.assertNotIn('Login', data)   
-        self.assertIn('Your post is now live!', data)       
+        self.assertNotIn('Login', data)
+        self.assertIn('Your post is now live!', data)
         self.assertIn('post id: 1 user id: 1 time UTC:', data)
         self.assertIn('post id: 2 user id: 2 time UTC:', data)
         self.assertIn('post id: 3 user id: 2 time UTC:', data)
@@ -268,11 +328,14 @@ class UserPostCase(unittest.TestCase):
         self.assertIn('content 2', data)
         self.assertIn('bob post content', data)
         self.assertIn('Edited post', data)
-        self.assertIn('Delete post', data)        
+        self.assertIn('Delete post', data)
         posts = Post.query.all()
         self.assertEqual(len(posts), 3)
 
-    def test_edit_post(self):      
+    def test_edit_post(self):
+        """
+        Тестируем редактирование поста.
+        """
         with self.client as c:
             username = 'bob'
             password = '321'
@@ -281,23 +344,30 @@ class UserPostCase(unittest.TestCase):
             response_get = c.get(path='/auth/login', content_type='text/html')
             data = str(response_get.data)
             # получаем csrf_token
-            start = data.find('name="csrf_token"') + 39 
-            stop = start + 91           
+            start = data.find('name="csrf_token"') + 39
+            stop = start + 91
             csrf_token = data[start:stop]
-            # пробуем отредактировать пост с id=2 в качестве анонимного пользователя 
+            # пробуем отредактировать пост с id=2 в качестве
+            # анонимного пользователя
             name = 'anonymous edit name 2'
             content = 'anonymous edit content 2'
             submit = "Submit"
+            data = {
+                    "name": name,
+                    "content": content,
+                    "submit": submit,
+                    "csrf_token": csrf_token
+            }
             response_anonymous_edit = c.post(
-                                     path='/main/edit/2', 
-                                     data={"name": name, "content": content, "submit": submit, 'csrf_token': csrf_token},
+                                     path='/main/edit/2',
+                                     data=data,
                                      follow_redirects=True
-            )                  
+            )
             self.assertEqual(response_anonymous_edit.status_code, 200)
             data = str(response_anonymous_edit.data)
             self.assertNotIn('Logout, {}'.format(username), data)
-            self.assertIn('Login', data)   
-            self.assertIn('Please log in to access this page.', data)       
+            self.assertIn('Login', data)
+            self.assertIn('Please log in to access this page.', data)
             self.assertNotIn('name 1', data)
             self.assertNotIn('name 2', data)
             self.assertNotIn('anonymous edit name 2', data)
@@ -305,37 +375,50 @@ class UserPostCase(unittest.TestCase):
             self.assertNotIn('content 2', data)
             self.assertNotIn('anonymous edit content 2', data)
             self.assertNotIn('Edited post', data)
-            self.assertNotIn('Delete post', data)        
+            self.assertNotIn('Delete post', data)
             post = Post.query.filter_by(id=2).first()
             self.assertIn('name 2', post.name)
             self.assertIn('content 2', post.content)
             self.assertNotIn(name, post.name)
             self.assertNotIn(content, post.content)
             # проходим процедуру аутентификации
+            data = {
+                    "username": username,
+                    "password": password,
+                    "submit": submit,
+                    "csrf_token": csrf_token
+            }
             response_post = c.post(
                               path='/auth/login',
-                              data={"username": username, "password": password, "submit": submit, 'csrf_token': csrf_token},
+                              data=data,
                               follow_redirects=True
             )
             self.assertEqual(response_post.status_code, 200)
             self.assertEqual(current_user.username, username)
             data = response_post.data
             self.assertIn('Logout', str(data))
-        # пробуем отредактировать пост с id=1, который не принадлежит нашему аутентифицированному пользователю 
+        # пробуем отредактировать пост с id=1, который не принадлежит
+        # нашему аутентифицированному пользователю
         name = 'bad edit name 1'
         content = 'bad edit content 1'
         submit = "Submit"
+        data = {
+                "name": name,
+                "content": content,
+                "submit": submit,
+                "csrf_token": csrf_token
+        }
         response_bad_edit = self.client.post(
-                                 path='/main/edit/1', 
-                                 data={"name": name, "content": content, "submit": submit, 'csrf_token': csrf_token},
+                                 path='/main/edit/1',
+                                 data=data,
                                  follow_redirects=True
-        )                  
+        )
         self.assertEqual(response_bad_edit.status_code, 200)
         data = str(response_bad_edit.data)
         self.assertIn('Logout, {}'.format(username), data)
-        self.assertNotIn('Login', data)   
+        self.assertNotIn('Login', data)
         self.assertIn('Permission error!', data)
-        self.assertNotIn('Your post is now edited!', data)       
+        self.assertNotIn('Your post is now edited!', data)
         self.assertNotIn(name, data)
         self.assertNotIn(content, data)
         post = Post.query.filter_by(id=1).first()
@@ -343,20 +426,27 @@ class UserPostCase(unittest.TestCase):
         self.assertNotEqual(post.content, content)
         self.assertEqual(post.name, "name 1")
         self.assertEqual(post.content, "content 1")
-        # редактируем пост с id=2, который принадлежит нашему аутентифицированному пользователю 
+        # редактируем пост с id=2, который принадлежит нашему
+        # аутентифицированному пользователю
         name = 'edit name 2'
         content = 'edit content 2'
         submit = "Submit"
+        data = {
+                "name": name,
+                "content": content,
+                "submit": submit,
+                "csrf_token": csrf_token
+        }
         response_edit = self.client.post(
-                                 path='/main/edit/2', 
-                                 data={"name": name, "content": content, "submit": submit, 'csrf_token': csrf_token},
+                                 path='/main/edit/2',
+                                 data=data,
                                  follow_redirects=True
-        )                  
+        )
         self.assertEqual(response_edit.status_code, 200)
         data = str(response_edit.data)
         self.assertIn('Logout, {}'.format(username), data)
-        self.assertNotIn('Login', data)   
-        self.assertIn('Your post is now edited!', data)       
+        self.assertNotIn('Login', data)
+        self.assertIn('Your post is now edited!', data)
         self.assertIn('post id: 1 user id: 1 time UTC:', data)
         self.assertIn('post id: 2 user id: 2 time UTC:', data)
         self.assertNotIn('post id: 3 user id: 2 time UTC:', data)
@@ -365,19 +455,26 @@ class UserPostCase(unittest.TestCase):
         self.assertIn('content 1', data)
         self.assertIn('edit content 2', data)
         self.assertIn('Edited post', data)
-        self.assertIn('Delete post', data)        
+        self.assertIn('Delete post', data)
         posts = Post.query.all()
         self.assertEqual(len(posts), 2)
 
     def test_delete_post(self):
-        # пробуем удалить пост с id=2 в качестве неаутентифицированного пользователя
-        response_anonymous_delete = self.client.get(path='/main/delete/2', follow_redirects=True)
+        """
+        Тестируем удаление поста.
+        """
+        # пробуем удалить пост с id=2 в качестве неаутентифицированного
+        # пользователя
+        response_anonymous_delete = self.client.get(
+                            path='/main/delete/2',
+                            follow_redirects=True
+        )
         self.assertEqual(response_anonymous_delete.status_code, 200)
         data = str(response_anonymous_delete.data)
         self.assertIn('Login', data)
         self.assertIn('Please log in to access this page.', data)
         posts = Post.query.all()
-        self.assertEqual(len(posts), 2)       
+        self.assertEqual(len(posts), 2)
         # аутентифицируемся
         with self.client as c:
             username = 'bob'
@@ -387,13 +484,19 @@ class UserPostCase(unittest.TestCase):
             response_get = c.get(path='/auth/login', content_type='text/html')
             data = str(response_get.data)
             # получаем csrf_token
-            start = data.find('name="csrf_token"') + 39 
-            stop = start + 91           
+            start = data.find('name="csrf_token"') + 39
+            stop = start + 91
             csrf_token = data[start:stop]
             # логинимся
+            data = {
+                    "username": username,
+                    "password": password,
+                    "submit": submit,
+                    "csrf_token": csrf_token
+            }
             response_post = c.post(
                               path='/auth/login',
-                              data={"username": username, "password": password, "submit": submit, 'csrf_token': csrf_token},
+                              data=data,
                               follow_redirects=True
             )
             data = response_post.data
@@ -407,8 +510,11 @@ class UserPostCase(unittest.TestCase):
             self.assertIn('content 2', data)
             self.assertIn('Edited post', data)
             self.assertIn('Delete post', data)
-            # пробуем удалить пост с id=1 который не пренадлежить нашему пользователю
-            response_authenticated_bad_delete = self.client.get(path='/main/delete/1', follow_redirects=True)
+            # пробуем удалить пост который не пренадлежить нашему пользователю
+            response_authenticated_bad_delete = self.client.get(
+                            path='/main/delete/1',
+                            follow_redirects=True
+            )
             self.assertEqual(response_authenticated_bad_delete.status_code, 200)
             data = str(response_authenticated_bad_delete.data)
             self.assertIn('Logout, {}'.format(username), data)
@@ -422,7 +528,10 @@ class UserPostCase(unittest.TestCase):
             posts = Post.query.all()
             self.assertEqual(len(posts), 2)
             # удаляем пост с id=2 который принадлежит нашему пользователю
-            response_authenticated_delete = self.client.get(path='/main/delete/2', follow_redirects=True)
+            response_authenticated_delete = self.client.get(
+                            path='/main/delete/2',
+                            follow_redirects=True
+            )
             self.assertEqual(response_authenticated_delete.status_code, 200)
             data = str(response_authenticated_delete.data)
             self.assertIn('Logout, {}'.format(username), data)
@@ -436,8 +545,7 @@ class UserPostCase(unittest.TestCase):
             self.assertEqual(len(posts), 1)
 
 
-
-class ApiPostCase(unittest.TestCase):     
+class ApiPostCase(unittest.TestCase):
     def setUp(self):
         self.app = create_app()
         self.app.config['TESTING'] = True
@@ -462,8 +570,11 @@ class ApiPostCase(unittest.TestCase):
         db.drop_all()
 
     def test_get_all_posts(self):
+        """
+        Тестируем запрос на получение всех постов.
+        """
         response = self.client.get(
-                                    path='/api/posts', 
+                                    path='/api/posts',
                                     content_type='application/json'
         )
         data = response.get_json()
@@ -476,8 +587,11 @@ class ApiPostCase(unittest.TestCase):
         self.assertNotEqual(data[0]['name'], 'name 2')
 
     def test_get_single_post(self):
+        """
+        Тестируем запрос на получение одного поста.
+        """
         response = self.client.get(
-                                    path='/api/posts/2', 
+                                    path='/api/posts/2',
                                     content_type='application/json'
         )
         data = response.get_json()
@@ -488,18 +602,21 @@ class ApiPostCase(unittest.TestCase):
         self.assertNotEqual(data['name'], 'name 1')
 
     def test_create_post_basic_auth(self):
+        """
+        Тестируем создание поста с базовой (праоль:логин) аутентификацией
+        """
         data = {'name': 'name 3', 'content': 'content 3'}
-        headers = {'Authorization': _basic_auth_str('bob', '321'),}
+        headers = {'Authorization': _basic_auth_str('bob', '321')}
         response_post = self.client.post(
-                                    path='/api/posts', 
-                                    data=json.dumps(data), 
-                                    headers=headers, 
+                                    path='/api/posts',
+                                    data=json.dumps(data),
+                                    headers=headers,
                                     content_type='application/json'
         )
         self.assertEqual(response_post.status_code, 201)
         # проверяем только что созданный пост
         response_get = self.client.get(
-                                    path='/api/posts/3', 
+                                    path='/api/posts/3',
                                     content_type='application/json'
         )
         data = response_get.get_json()
@@ -509,25 +626,107 @@ class ApiPostCase(unittest.TestCase):
         self.assertEqual(data['content'], 'content 3')
         self.assertNotEqual(data['name'], 'name 1')
 
+    def test_create_post_bad_basic_auth(self):
+        """
+        Пытаемся создать пост с недействительными логином или паролем.
+        """
+        # Недействительный логин
+        data = {'name': 'name 3', 'content': 'content 3'}
+        headers = {'Authorization': _basic_auth_str('***', '321')}
+        response_post_bad_login = self.client.post(
+                                    path='/api/posts',
+                                    data=json.dumps(data),
+                                    headers=headers,
+                                    content_type='application/json'
+        )
+        data = response_post_bad_login.get_json()
+        self.assertEqual(response_post_bad_login.status_code, 401)
+        self.assertEqual(data['error'], 'Unauthorized')
+        self.assertNotIn('id', data)
+        self.assertNotEqual('name', data)
+        self.assertNotEqual('content', data)
+        # проверяем, через запрос к бд, что количество постов не изменилось
+        posts = Post.query.all()
+        self.assertEqual(len(posts), 2)
+        # Недействительный пароль
+        data = {'name': 'name 3', 'content': 'content 3'}
+        headers = {'Authorization': _basic_auth_str('bob', '***')}
+        response_post_bad_password = self.client.post(
+                                    path='/api/posts',
+                                    data=json.dumps(data),
+                                    headers=headers,
+                                    content_type='application/json'
+        )
+        data = response_post_bad_password.get_json()
+        self.assertEqual(response_post_bad_password.status_code, 401)
+        self.assertEqual(data['error'], 'Unauthorized')
+        self.assertNotIn('id', data)
+        self.assertNotEqual('name', data)
+        self.assertNotEqual('content', data)
+        # проверяем, через запрос к бд, что количество постов не изменилось
+        posts = Post.query.all()
+        self.assertEqual(len(posts), 2)
+        # Недействительный логин и пароль
+        data = {'name': 'name 3', 'content': 'content 3'}
+        headers = {'Authorization': _basic_auth_str('***', '***')}
+        response_post_bad_login_password = self.client.post(
+                                    path='/api/posts',
+                                    data=json.dumps(data),
+                                    headers=headers,
+                                    content_type='application/json'
+        )
+        data = response_post_bad_login_password.get_json()
+        self.assertEqual(response_post_bad_login_password.status_code, 401)
+        self.assertEqual(data['error'], 'Unauthorized')
+        self.assertNotIn('id', data)
+        self.assertNotEqual('name', data)
+        self.assertNotEqual('content', data)
+        # проверяем, через запрос к бд, что количество постов не изменилось
+        posts = Post.query.all()
+        self.assertEqual(len(posts), 2)
+
+    def test_create_post_without_auth(self):
+        """
+        Пытаемся создать пост без аутентификации.
+        """
+        data = {'name': 'name 3', 'content': 'content 3'}
+        response_post_bad_without_auth = self.client.post(
+                                    path='/api/posts',
+                                    data=json.dumps(data),
+                                    content_type='application/json'
+        )
+        data = response_post_bad_without_auth.get_json()
+        self.assertEqual(response_post_bad_without_auth.status_code, 401)
+        self.assertEqual(data['error'], 'Unauthorized')
+        self.assertNotIn('id', data)
+        self.assertNotEqual('name', data)
+        self.assertNotEqual('content', data)
+        # проверяем, через запрос к бд, что количество постов не изменилось
+        posts = Post.query.all()
+        self.assertEqual(len(posts), 2)
+
     def test_create_post_token_auth(self):
-        # получаем токен        
-        headers = {'Authorization': _basic_auth_str('bob', '321'),}
+        """
+        Тестируем создание поста с аутентификацией по токену.
+        """
+        # получаем токен
+        headers = {'Authorization': _basic_auth_str('bob', '321')}
         response_get_token = self.client.post(
-                                    path='/api/tokens', 
-                                    headers=headers, 
+                                    path='/api/tokens',
+                                    headers=headers,
                                     content_type='application/json'
         )
         self.assertEqual(response_get_token.status_code, 200)
         self.assertIn('token', str(response_get_token.json))
         token = response_get_token.json['token']
         self.assertEqual(len(token), 32)
-        # создаем пост используя аутентификацию по токену     
+        # создаем пост используя аутентификацию по токену
         data = {'name': 'name 3', 'content': 'content 3'}
-        headers={"Authorization": "Bearer {token}".format(token=token)}
+        headers = {"Authorization": "Bearer {token}".format(token=token)}
         response_token_create_post = self.client.post(
-                                    path='/api/posts', 
-                                    data=json.dumps(data), 
-                                    headers=headers, 
+                                    path='/api/posts',
+                                    data=json.dumps(data),
+                                    headers=headers,
                                     content_type='application/json'
         )
         data = response_token_create_post.get_json()
@@ -540,16 +739,20 @@ class ApiPostCase(unittest.TestCase):
         self.assertEqual(len(posts), 3)
 
     def test_create_post_bad_token_auth(self):
-        # создаем "плохой" токен
+        """
+        Пытаемся создать пост с аутентификацией по недействительному токену.
+        """
+        # создаем недействительный токен
         token = base64.b64encode(os.urandom(24)).decode('utf-8')
         self.assertEqual(len(token), 32)
-        # пробуем создать пост используя аутентификацию с "плохим" токеном
+        # пробуем создать пост используя аутентификацию с
+        # недействительный токеном
         data = {'name': 'name 3', 'content': 'content 3'}
-        headers={"Authorization": "Bearer {token}".format(token=token)}
+        headers = {"Authorization": "Bearer {token}".format(token=token)}
         response_token_create_post = self.client.post(
-                                    path='/api/posts', 
-                                    data=json.dumps(data), 
-                                    headers=headers, 
+                                    path='/api/posts',
+                                    data=json.dumps(data),
+                                    headers=headers,
                                     content_type='application/json'
         )
         data = response_token_create_post.get_json()
@@ -563,33 +766,32 @@ class ApiPostCase(unittest.TestCase):
         self.assertEqual(len(posts), 2)
 
     def test_update_post_basic_auth(self):
-        data = {'name': 'updated name 2', 'content': 'updated content 2'}        
-        # пробуем отредактировать пост принадлежащий другому пользователю
-        headers = {'Authorization': _basic_auth_str('john', '123'),}
-        response_bed_put = self.client.put(
-                                    path='/api/posts/2', 
-                                    data=json.dumps(data), 
-                                    headers=headers, 
-                                    content_type='application/json'
-        )
-        self.assertNotEqual(response_bed_put.status_code, 201)
+        """
+        Тестируем редактирование поста с применением базовой аутентификации.
+        """
         # редактируем пост принадлежащий пользователю который его создал
-        headers = {'Authorization': _basic_auth_str('bob', '321'),}
+        data = {'name': 'updated name 2', 'content': 'updated content 2'}
+        headers = {'Authorization': _basic_auth_str('bob', '321')}
         response_put = self.client.put(
-                                    path='/api/posts/2', 
-                                    data=json.dumps(data), 
-                                    headers=headers, 
+                                    path='/api/posts/2',
+                                    data=json.dumps(data),
+                                    headers=headers,
                                     content_type='application/json'
         )
         self.assertEqual(response_put.status_code, 201)
+        # проверяем, не изменилось ли количество постов используя
+        # тестовый клиент
         response_get_all = self.client.get(
-                                    path='/api/posts', 
+                                    path='/api/posts',
                                     content_type='application/json'
         )
         self.assertEqual(len(response_get_all.get_json()), 2)
-        self.assertNotEqual(len(response_get_all.get_json()), 3)
+        # проверяем, не изменилось ли количество постов через запрос к бд
+        posts = Post.query.all()
+        self.assertEqual(len(posts), 2)
+        # проверяем, действительно ли пост обновился
         response_get_single = self.client.get(
-                                    path='/api/posts/2', 
+                                    path='/api/posts/2',
                                     content_type='application/json'
         )
         data = response_get_single.get_json()
@@ -599,25 +801,69 @@ class ApiPostCase(unittest.TestCase):
         self.assertEqual(data['content'], 'updated content 2')
         self.assertNotEqual(data['name'], 'name 2')
 
+    def test_update_post_basic_auth_other_owner(self):
+        """
+        Пытаемся, с применением базовой аутентификации, редактировать
+        пост принадлежащий другому пользователю.
+        """
+        # пробуем отредактировать пост принадлежащий другому пользователю
+        data = {'name': 'updated name 2', 'content': 'updated content 2'}
+        headers = {'Authorization': _basic_auth_str('john', '123')}
+        response_bed_put = self.client.put(
+                                    path='/api/posts/2',
+                                    data=json.dumps(data),
+                                    headers=headers,
+                                    content_type='application/json'
+        )
+        self.assertNotEqual(response_bed_put.status_code, 201)
+        data = response_bed_put.get_json()
+        self.assertIn('error', data)
+        self.assertIn('message', data)
+        self.assertEqual(data['error'], 'Forbidden')
+        self.assertEqual(data['message'], 'Permission error!')
+        # проверяем, не изменилось ли количество постов через запрос к бд
+        posts = Post.query.all()
+        self.assertEqual(len(posts), 2)
+        # проверяем, не изменился ли пост с помощью тестового клиента
+        response_get_single = self.client.get(
+                                    path='/api/posts/2',
+                                    content_type='application/json'
+        )
+        data = response_get_single.get_json()
+        self.assertEqual(response_get_single.status_code, 200)
+        self.assertEqual(data['id'], 2)
+        self.assertNotEqual(data['name'], 'updated name 2')
+        self.assertNotEqual(data['content'], 'updated content 2')
+        # дополнительна проверка не изменился ли пост, через запрос к бд
+        post = Post.query.filter_by(id=2).first()
+        self.assertEqual(post.id, 2)
+        self.assertEqual(post.name, 'name 2')
+        self.assertEqual(post.content, 'content 2')
+        self.assertNotEqual(post.name, 'updated name 2')
+        self.assertNotEqual(post.content, 'updated content 2')
+
     def test_update_post_token_auth(self):
-        # получаем токен                     
-        headers = {'Authorization': _basic_auth_str('bob', '321'),}
+        """
+        Тестируем обновление поста с применением аутентификации по токену.
+        """
+        # получаем токен
+        headers = {'Authorization': _basic_auth_str('bob', '321')}
         response_get_token = self.client.post(
-                                    path='/api/tokens', 
-                                    headers=headers, 
+                                    path='/api/tokens',
+                                    headers=headers,
                                     content_type='application/json'
         )
         self.assertEqual(response_get_token.status_code, 200)
         self.assertIn('token', str(response_get_token.json))
         token = response_get_token.json['token']
-        self.assertEqual(len(token), 32)     
+        self.assertEqual(len(token), 32)
         # редактируем пост используя аутентификацию по токену
-        headers={"Authorization": "Bearer {token}".format(token=token)}     
-        data = {'name': 'updated name 2', 'content': 'updated content 2'} 
+        headers = {"Authorization": "Bearer {token}".format(token=token)}
+        data = {'name': 'updated name 2', 'content': 'updated content 2'}
         response_put = self.client.put(
-                                    path='/api/posts/2', 
-                                    data=json.dumps(data), 
-                                    headers=headers, 
+                                    path='/api/posts/2',
+                                    data=json.dumps(data),
+                                    headers=headers,
                                     content_type='application/json'
         )
         self.assertEqual(response_put.status_code, 201)
@@ -628,13 +874,13 @@ class ApiPostCase(unittest.TestCase):
         self.assertNotEqual(data['name'], 'name 2')
         # проверяем что количество постов не изменилось
         response_get_all = self.client.get(
-                                    path='/api/posts', 
+                                    path='/api/posts',
                                     content_type='application/json'
         )
         self.assertEqual(len(response_get_all.get_json()), 2)
-        # проверяем что пость действительно обновился
+        # проверяем что пост действительно обновился используя тестовый клиент
         response_get_single = self.client.get(
-                                    path='/api/posts/2', 
+                                    path='/api/posts/2',
                                     content_type='application/json'
         )
         data = response_get_single.get_json()
@@ -643,18 +889,28 @@ class ApiPostCase(unittest.TestCase):
         self.assertEqual(data['name'], 'updated name 2')
         self.assertEqual(data['content'], 'updated content 2')
         self.assertNotEqual(data['name'], 'name 2')
+        # проверяем что пост действительно обновился через запрос к бд
+        post = Post.query.filter_by(id=2).first()
+        self.assertEqual(post.id, 2)
+        self.assertEqual(post.name, 'updated name 2')
+        self.assertEqual(post.content, 'updated content 2')
 
     def test_update_post_bad_token_auth(self):
-        # создаем "плохой" токен
+        """
+        Пробуем обновить пост применяя аутентификацию с
+        недейтсвительным токеном.
+        """
+        # создаем недействительный токен
         token = base64.b64encode(os.urandom(24)).decode('utf-8')
         self.assertEqual(len(token), 32)
-        # пробуем отредактировать пост используя аутентификацию с "плохим" токеном
-        data = {'name': 'updated name 2', 'content': 'updated content 2'} 
-        headers={"Authorization": "Bearer {token}".format(token=token)}
+        # пробуем отредактировать пост используя аутентификацию с
+        # недействительный токеном
+        data = {'name': 'updated name 2', 'content': 'updated content 2'}
+        headers = {"Authorization": "Bearer {token}".format(token=token)}
         response_token_update_post = self.client.put(
                                     path='/api/posts/2',
-                                    data=json.dumps(data), 
-                                    headers=headers, 
+                                    data=json.dumps(data),
+                                    headers=headers,
                                     content_type='application/json'
         )
         data = response_token_update_post.get_json()
@@ -663,18 +919,112 @@ class ApiPostCase(unittest.TestCase):
         self.assertNotIn('id', data)
         self.assertNotEqual('name', data)
         self.assertNotEqual('content', data)
+        # проверяем что пост не изменился через запрос к бд
+        post = Post.query.filter_by(id=2).first()
+        self.assertEqual(post.id, 2)
+        self.assertEqual(post.name, 'name 2')
+        self.assertEqual(post.content, 'content 2')
+        self.assertNotEqual(post.name, 'updated name 2')
+        self.assertNotEqual(post.content, 'updated content 2')
+
+    def test_update_post_token_auth_other_owner(self):
+        """
+        Пытаемся, применяя аутентификацию с токеном , редактировать
+        пост принадлежащий другому пользователю.
+        """
+        # получаем токен
+        headers = {'Authorization': _basic_auth_str('john', '123')}
+        response_get_token = self.client.post(
+                                    path='/api/tokens',
+                                    headers=headers,
+                                    content_type='application/json'
+        )
+        self.assertEqual(response_get_token.status_code, 200)
+        self.assertIn('token', str(response_get_token.json))
+        token = response_get_token.json['token']
+        self.assertEqual(len(token), 32)
+        # пробуем отредактировать пост принадлежащий другому пользователю
+        headers = {"Authorization": "Bearer {token}".format(token=token)}
+        data = {'name': 'updated name 2', 'content': 'updated content 2'}
+        response_bed_put = self.client.put(
+                                    path='/api/posts/2',
+                                    data=json.dumps(data),
+                                    headers=headers,
+                                    content_type='application/json'
+        )
+        self.assertEqual(response_bed_put.status_code, 403)
+        data = response_bed_put.get_json()
+        self.assertIn('error', data)
+        self.assertIn('message', data)
+        self.assertEqual(data['error'], 'Forbidden')
+        self.assertEqual(data['message'], 'Permission error!')
+        # проверяем, не изменилось ли количество постов через запрос к бд
+        posts = Post.query.all()
+        self.assertEqual(len(posts), 2)
+        # проверяем, не изменился ли пост с помощью тестового клиента
+        response_get_single = self.client.get(
+                                    path='/api/posts/2',
+                                    content_type='application/json'
+        )
+        data = response_get_single.get_json()
+        self.assertEqual(response_get_single.status_code, 200)
+        self.assertEqual(data['id'], 2)
+        self.assertNotEqual(data['name'], 'updated name 2')
+        self.assertNotEqual(data['content'], 'updated content 2')
+        # дополнительна проверка не изменился ли пост, через запрос к бд
+        post = Post.query.filter_by(id=2).first()
+        self.assertEqual(post.id, 2)
+        self.assertEqual(post.name, 'name 2')
+        self.assertEqual(post.content, 'content 2')
+
+    def test_update_post_without_auth(self):
+        """
+        Пытаемся отредактировать пост без какой бы то нибыло аутентификации.
+        """
+        data = {'name': 'updated name 2', 'content': 'updated content 2'}
+        response_post_without_auth = self.client.put(
+                                    path='/api/posts/2',
+                                    data=json.dumps(data),
+                                    content_type='application/json'
+        )
+        data = response_post_without_auth.get_json()
+        self.assertEqual(response_post_without_auth.status_code, 401)
+        self.assertEqual(data['error'], 'Unauthorized')
+        self.assertNotIn('id', data)
+        self.assertNotEqual('name', data)
+        self.assertNotEqual('content', data)
+        # проверяем, что количество постов не  изменилось через запрос к бд
+        posts = Post.query.all()
+        self.assertEqual(len(posts), 2)
+        # проверяем, что пост не изменился с помощью тестового клиента
+        response_get_single = self.client.get(
+                                    path='/api/posts/2',
+                                    content_type='application/json'
+        )
+        data = response_get_single.get_json()
+        self.assertEqual(response_get_single.status_code, 200)
+        self.assertEqual(data['id'], 2)
+        self.assertNotEqual(data['name'], 'updated name 2')
+        self.assertNotEqual(data['content'], 'updated content 2')
+        self.assertEqual(data['name'], 'name 2')
+        self.assertEqual(data['content'], 'content 2')
+        # дополнительна проверка не изменился ли пост, через запрос к бд
+        post = Post.query.filter_by(id=2).first()
+        self.assertEqual(post.id, 2)
+        self.assertEqual(post.name, 'name 2')
+        self.assertEqual(post.content, 'content 2')
 
     def test_delete_post_basic_auth(self):
         """
         Удаляем пост используя базовую (логин:пароль) аутентификацию.
         """
-        headers = {'Authorization': _basic_auth_str('bob', '321'),}
+        headers = {'Authorization': _basic_auth_str('bob', '321')}
         response_delete = self.client.delete(
-                                    path='/api/posts/2', 
-                                    headers=headers, 
+                                    path='/api/posts/2',
+                                    headers=headers,
                                     content_type='application/json'
-        )        
-        self.assertEqual(response_delete.status_code, 202)        
+        )
+        self.assertEqual(response_delete.status_code, 202)
         self.assertEqual(len(response_delete.get_json()), 1)
         data_delete = response_delete.get_json()
         self.assertEqual(data_delete[0]['id'], 1)
@@ -686,7 +1036,7 @@ class ApiPostCase(unittest.TestCase):
         self.assertEqual(len(posts), 1)
         # проверяем количество постов после удаления используя тестовый клиент
         response_get_all = self.client.get(
-                                    path='/api/posts', 
+                                    path='/api/posts',
                                     content_type='application/json'
         )
         self.assertEqual(len(response_get_all.get_json()), 1)
@@ -697,23 +1047,23 @@ class ApiPostCase(unittest.TestCase):
 
     def test_delete_post_bad_owner_basic_auth(self):
         """
-        Пытаемся удалить чужой пост (пользователя john) 
-        используя базовую (логин:пароль) аутентификацию 
+        Пытаемся удалить чужой пост (пользователя john)
+        используя базовую (логин:пароль) аутентификацию
         с реквизитами пользователя bob.
         """
-        headers = {'Authorization': _basic_auth_str('bob', '321'),}
+        headers = {'Authorization': _basic_auth_str('bob', '321')}
         response_delete = self.client.delete(
-                                    path='/api/posts/1', 
-                                    headers=headers, 
+                                    path='/api/posts/1',
+                                    headers=headers,
                                     content_type='application/json'
-        )        
-        self.assertEqual(response_delete.status_code, 403)        
+        )
+        self.assertEqual(response_delete.status_code, 403)
         data_delete = response_delete.get_json()
         self.assertIn('error', data_delete)
         self.assertIn('message', data_delete)
         self.assertEqual(data_delete['error'], 'Forbidden')
         self.assertEqual(data_delete['message'], 'Permission error!')
-        # проверяем количество постов после удаления через запрос к бд
+        # проверяем, через запрос к бд, количество постов после удаления
         posts = Post.query.all()
         self.assertEqual(len(posts), 2)
 
@@ -721,37 +1071,38 @@ class ApiPostCase(unittest.TestCase):
         """
         Удаляем пост используя аутентификацию с токеном.
         """
-        # получаем токен                     
-        headers = {'Authorization': _basic_auth_str('bob', '321'),}
+        # получаем токен
+        headers = {'Authorization': _basic_auth_str('bob', '321')}
         response_get_token = self.client.post(
-                                    path='/api/tokens', 
-                                    headers=headers, 
+                                    path='/api/tokens',
+                                    headers=headers,
                                     content_type='application/json'
         )
         self.assertEqual(response_get_token.status_code, 200)
         self.assertIn('token', str(response_get_token.json))
         token = response_get_token.json['token']
-        self.assertEqual(len(token), 32) 
+        self.assertEqual(len(token), 32)
         # удаляем пост используя аутентификацию по токену
-        headers={"Authorization": "Bearer {token}".format(token=token)}
+        headers = {"Authorization": "Bearer {token}".format(token=token)}
         response_delete = self.client.delete(
-                                    path='/api/posts/2', 
-                                    headers=headers, 
+                                    path='/api/posts/2',
+                                    headers=headers,
                                     content_type='application/json'
-        )        
-        self.assertEqual(response_delete.status_code, 202)        
+        )
+        self.assertEqual(response_delete.status_code, 202)
         self.assertEqual(len(response_delete.get_json()), 1)
         data_delete = response_delete.get_json()
         self.assertEqual(data_delete[0]['id'], 1)
         self.assertEqual(data_delete[0]['name'], 'name 1')
         self.assertEqual(data_delete[0]['content'], 'content 1')
         self.assertNotEqual(data_delete[0]['name'], 'name 2')
-        # проверяем количество постов после удаления через запрос к бд
+        # проверяем, через запрос к бд, количество постов после удаления
         posts = Post.query.all()
         self.assertEqual(len(posts), 1)
-        # проверяем количество постов после удаления используя тестовый клиент
+        # проверяем, используя тестовый клиент, количество
+        # постов после удаления
         response_get_all = self.client.get(
-                                    path='/api/posts', 
+                                    path='/api/posts',
                                     content_type='application/json'
         )
         self.assertEqual(len(response_get_all.get_json()), 1)
@@ -762,24 +1113,25 @@ class ApiPostCase(unittest.TestCase):
         self.assertNotEqual(data_get_all[0]['name'], 'name 2')
         # пытаемся получить только что удаленный пост
         response_get_single = self.client.get(
-                                    path='/api/posts/2', 
+                                    path='/api/posts/2',
                                     content_type='application/json'
         )
-        data = response_get_single.get_json()
         self.assertEqual(response_get_single.status_code, 404)
 
     def test_delete_post_bad_token_auth(self):
         """
-        Пробуем удалить пост пытаясь аутентифицироваться с недействительным токеном.
+        Пробуем удалить пост пытаясь аутентифицироваться с
+        недействительным токеном.
         """
         # создаем "недействительный" токен
         token = base64.b64encode(os.urandom(24)).decode('utf-8')
         self.assertEqual(len(token), 32)
-        # пробуем удалить пост пытаясь аутентифицироваться с недействительным токеном
-        headers={"Authorization": "Bearer {token}".format(token=token)}
+        # пробуем удалить пост пытаясь аутентифицироваться с
+        # недействительным токеном
+        headers = {"Authorization": "Bearer {token}".format(token=token)}
         response_delete = self.client.delete(
-                                    path='/api/posts/2', 
-                                    headers=headers, 
+                                    path='/api/posts/2',
+                                    headers=headers,
                                     content_type='application/json'
         )
         self.assertEqual(response_delete.status_code, 401)
@@ -793,38 +1145,38 @@ class ApiPostCase(unittest.TestCase):
         """
         Пытаемся удалить чужой пост, используя аутентификацию с токеном.
         """
-        # получаем токен для пользователя bob                    
-        headers = {'Authorization': _basic_auth_str('bob', '321'),}
+        # получаем токен для пользователя bob
+        headers = {'Authorization': _basic_auth_str('bob', '321')}
         response_get_token = self.client.post(
-                                    path='/api/tokens', 
-                                    headers=headers, 
+                                    path='/api/tokens',
+                                    headers=headers,
                                     content_type='application/json'
         )
         self.assertEqual(response_get_token.status_code, 200)
         self.assertIn('token', str(response_get_token.json))
         token = response_get_token.json['token']
-        self.assertEqual(len(token), 32) 
-        # пытаемся удалить чужой пост, принадлежащий пользователю john 
-        headers={"Authorization": "Bearer {token}".format(token=token)}
+        self.assertEqual(len(token), 32)
+        # пытаемся удалить чужой пост, принадлежащий пользователю john
+        headers = {"Authorization": "Bearer {token}".format(token=token)}
         response_delete = self.client.delete(
-                                    path='/api/posts/1', 
-                                    headers=headers, 
+                                    path='/api/posts/1',
+                                    headers=headers,
                                     content_type='application/json'
-        )  
-        self.assertEqual(response_delete.status_code, 403)        
+        )
+        self.assertEqual(response_delete.status_code, 403)
         data_delete = response_delete.get_json()
         self.assertIn('error', data_delete)
         self.assertIn('message', data_delete)
         self.assertEqual(data_delete['error'], 'Forbidden')
         self.assertEqual(data_delete['message'], 'Permission error!')
-        # проверяем что количество постов после попытки 
-        # удаления не изменилось, через запрос к бд
+        # проверяем, через запрос к бд, что количество постов
+        # после попытки удаления не изменилось
         posts = Post.query.all()
         self.assertEqual(len(posts), 2)
-        # проверяем что количество постов после попытки 
-        # удаления не изменилось, с помощью тестового клиента
+        # проверяем, с помощью тестового клиента, что количество
+        # постов после попытки удаления не изменилось
         response_get_all = self.client.get(
-                                    path='/api/posts', 
+                                    path='/api/posts',
                                     content_type='application/json'
         )
         self.assertEqual(len(response_get_all.get_json()), 2)
@@ -836,7 +1188,40 @@ class ApiPostCase(unittest.TestCase):
         self.assertEqual(data_get_all[1]['name'], 'name 2')
         self.assertEqual(data_get_all[1]['content'], 'content 2')
 
+    def test_delete_post_without_auth(self):
+        """
+        Пытаемся удалить пост без какой бы то нибыло аутентификации.
+        """
+        # пытаемся, без аутентификации, удалить пост
+        response_delete = self.client.delete(
+                                    path='/api/posts/1',
+                                    content_type='application/json'
+        )
+        self.assertEqual(response_delete.status_code, 401)
+        data_delete = response_delete.get_json()
+        self.assertIn('error', data_delete)
+        self.assertEqual(data_delete['error'], 'Unauthorized')
+        # проверяем, через запрос к бд, что количество постов
+        # после попытки удаления не изменилось
+        posts = Post.query.all()
+        self.assertEqual(len(posts), 2)
+        # проверяем, с помощью тестового клиента, что количество
+        # постов после попытки удаления не изменилось
+        response_get_all = self.client.get(
+                                    path='/api/posts',
+                                    content_type='application/json'
+        )
+        self.assertEqual(len(response_get_all.get_json()), 2)
+        # проверяем что содержимое постов,
+        # после попытки удаления, не изменилось
+        data_get_all = response_get_all.get_json()
+        self.assertEqual(data_get_all[0]['id'], 1)
+        self.assertEqual(data_get_all[0]['name'], 'name 1')
+        self.assertEqual(data_get_all[0]['content'], 'content 1')
+        self.assertEqual(data_get_all[1]['id'], 2)
+        self.assertEqual(data_get_all[1]['name'], 'name 2')
+        self.assertEqual(data_get_all[1]['content'], 'content 2')
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
-
