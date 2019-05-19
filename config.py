@@ -14,8 +14,7 @@ class Config(object):
     SECRET_KEY = 'YOUR_RANDOM_SECRET_KEY'
     #SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-will-never-guess'    
     # URI используемая для подключения к базе данных
-    #SQLALCHEMY_DATABASE_URI = os.environ['DATABASE_URL']
-    SQLALCHEMY_DATABASE_URI = 'postgresql://flask:09051945@localhost/flask'
+    SQLALCHEMY_DATABASE_URI = os.environ['DATABASE_URL'] or 'postgresql://flask:09051945@localhost/flask'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 

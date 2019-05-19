@@ -7,6 +7,13 @@
 ## Setup
 
 ```
+# создать базу данных можно так:
+sudo -u postgres createdb DBNAME
+sudo -u postgres psql
+CREATE ROLE username WITH LOGIN PASSWORD 'password';
+GRANT ALL PRIVILEGES ON DATABASE DBNAME TO username;
+ALTER USER username CREATEDB;
+\q
 python3 -m venv myvenv
 source myvenv/bin/activate
 pip3 install -r requirements.txt
@@ -27,6 +34,7 @@ python manage.py runserver
 #### Запуск тестов:
 source myvenv/bin/activate  
 export APP_SETTINGS="config.DevelopmentConfig"  
+export DATABASE_URL='postgresql://DBUSERNAME:DBPASSWORD@localhost/DBNAME'  
 python3 tests.py  
 
 ### Примеры запросов к API:  
